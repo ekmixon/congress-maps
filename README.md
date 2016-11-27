@@ -2,6 +2,8 @@
 
 Follow the steps below to create a web map of United States congressional districts from Census Bureau data using Mapbox. You can also use this to create a lat/lng-to-congressional district API.
 
+These instructions create maps for the 115th Congress using district boundaries as of the 2016 election. (These differed from the 2010 Census boundaries because of court-ordered redistricting in three states in early 2016.)
+
 You will need an account on Mapbox.com. Then follow the commands below from the Mac OS X or Ubuntu terminal.
 
 Why use [Tippecanoe](https://github.com/mapbox/tippecanoe)? Using Tippecanoe provides more control over how the geometries are tiled into a map. For comparison, using the Mapbox Studio default upload will not show a zoomed-out full country view of the data because the boundaries are so detailed; the default upload thinks you are only interested in looking closer at the data. Tippecanoe stops  oversimplification of the geometry and also specifies a min/max zoom level.
@@ -46,27 +48,27 @@ npm install
 To complete these steps, run the commands below. Set `MAPBOX_USERNAME` to your Mapbox username, `MAPBOX_DEFAULT_ACCESS_TOKEN` to your Mapbox default access token, and `MAPBOX_ACESS_TOKEN` to a `uploads:write` scope access token from your [Mapbox account](https://www.mapbox.com/studio/account/tokens).
 
 ```
-# setup Mapbox account name and access tokens
-export MAPBOX_USERNAME=<your mapbox username>
-export MAPBOX_DEFAULT_ACCESS_TOKEN=<your mapbox default access token>
-export MAPBOX_WRITE_SCOPE_ACCESS_TOKEN=<your mapbox write scope access token>
-
 # create directory to store data
 mkdir data
 
 # dowload Census boundaries data, unzip the data, and convert it to GeoJSON
-wget -P data ftp://ftp2.census.gov/geo/tiger/TIGER2015/CD/tl_2015_us_cd114.zip
-unzip data/tl_2015_us_cd114.zip -d ./data/
-ogr2ogr -f GeoJSON -t_srs crs:84 data/congressional_districts.geojson data/tl_2015_us_cd114.shp
+wget -P data ftp://ftp2.census.gov/geo/tiger/TIGER2016/CD/tl_2016_us_cd115.zip
+unzip data/tl_2016_us_cd115.zip -d ./data/
+ogr2ogr -f GeoJSON -t_srs crs:84 data/congressional_districts.geojson data/tl_2016_us_cd115.shp
 
 # run processing on data
 node process.js data/congressional_districts.geojson
 
 # create Mapbox vector tiles from data
-tippecanoe -o data/cd-114-2015.mbtiles -f -z 12 -Z 0 -B 0 -pS -pp -l districts -n "US Congressional Districts" data/map.geojson
+tippecanoe -o data/cd-115-2016.mbtiles -f -z 12 -Z 0 -B 0 -pS -pp -l districts -n "US Congressional Districts" data/map.geojson
+
+# setup Mapbox account name and access tokens
+export MAPBOX_USERNAME=<your mapbox username>
+export MAPBOX_DEFAULT_ACCESS_TOKEN=<your mapbox default access token>
+export MAPBOX_WRITE_SCOPE_ACCESS_TOKEN=<your mapbox write scope access token>
 
 # upload map data to Mapbox.com
-node upload.js data/cd-114-2015.mbtiles
+node upload.js data/cd-115-2016.mbtiles "cd-115-2016" "US_Congressional_Districts_115th_2016"
 
 # modify mapbox-style-template.json to use your Mapbox account and save as data/mapbox-style.json
 sed s/'USER'/"$MAPBOX_USERNAME"/g mapbox-style-template.json > data/mapbox-style.json
