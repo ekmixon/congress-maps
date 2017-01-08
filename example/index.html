@@ -7,11 +7,11 @@
     <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
 
     <!-- jQuery -->
-    <script   src="http://code.jquery.com/jquery-1.12.2.min.js" integrity="sha256-lZFHibXzMHo3GGeehn1hudTAP3Sc0uKXBXAzHX1sjtk=" crossorigin="anonymous"></script>
+    <script   src="http://code.jquery.com/jquery-3.1.1.min.js" integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous"></script>
 
     <!-- Mabpox GL -->
-    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.17.0/mapbox-gl.js'></script>
-    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.17.0/mapbox-gl.css' rel='stylesheet'>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v0.30.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v0.30.0/mapbox-gl.css' rel='stylesheet' />
 
     <!-- Mapbox.js (fallback) -->
     <script src='https://api.mapbox.com/mapbox.js/v2.3.0/mapbox.js'></script>
@@ -150,15 +150,24 @@ if (mapboxgl.supported({ failIfMajorPerformanceCaveat: true })) {
 
   // Once map is fully loaded...
   map.on('load', function() {
-
-    // Retrieve the JSON styling object for the map
-    var baseStyle = map.getStyle()
-
     // Add zoom and rotation controls to the map
-    map.addControl(new mapboxgl.Navigation({ position: 'bottom-left' }));
+    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
     // Disable using touch gestures for map rotation
     map.touchZoomRotate.disableRotation();
+
+    // Fetch the built-in filters that determine the color assignments
+    // for layers, which we have to preserve when we add additional
+    // filters for state & district.
+    var layer_base_names = ["districts-labels-", "districts-borders-", "districts-fill-"];
+    var layer_base_filters = { };
+    for (var i = 1; i <= 5; i++) {
+      for (var j = 0; j < 3; j++) {
+        var layer = layer_base_names[j] + i;
+        layer_base_filters[layer] = map.getFilter(layer);
+      }
+    }
+
 
     // Given a state postal abbreviation and a US Census district number, focus the map on that area
     function focusMap(stateAbbr, districtCode) {
@@ -173,40 +182,18 @@ if (mapboxgl.supported({ failIfMajorPerformanceCaveat: true })) {
       });
       if (districtCode) $('#district').val(districtCode);
 
-      // For each district color layer in the map, apply some filters...
+      // Create a filter to show only the selected state and district. For
+      // layers that have a color filter already applied, we have to put it
+      // back.
+      var filter = ['all'];
+      if (stateAbbr) filter.push(['==', 'state', stateAbbr]);
+      if (districtCode) filter.push(['==', 'number', districtCode]);
       for (var i = 1; i <= 5; i++) {
-
-        // The filter that filters based on color is the one we want to preserve
-        // If there are already multiple filters applied, it will be the last one
-        var exisitingFilter = map.getFilter('districts_' + i);
-        if (exisitingFilter[0] === 'all') {
-          exisitingFilter = exisitingFilter[exisitingFilter.length - 1];
+        for (var j = 0; j < 3; j++) {
+          var layer = layer_base_names[j] + i;
+          map.setFilter(layer, filter.concat([layer_base_filters[layer]]));
         }
-
-        // Create a fresh filter to be applied
-        var filter = ['all'];
-
-        // Add filters for the focus state and district number
-        if (stateAbbr) filter.push(['==', 'state', stateAbbr]);
-        if (districtCode) filter.push(['==', 'number', districtCode]);
-
-        // Add the existing color filter
-        var layerFilter = filter.concat([exisitingFilter]);
-
-        // Set new layer filter for each district layer in the map
-        map.setFilter('districts_' + i, layerFilter);
-        map.setFilter('districts_' + i + '_boundary', layerFilter);
-        map.setFilter('districts_' + i + '_label', layerFilter);
-
       }
-
-      // Create a generic filter for the focus state and district number that does not include color filtering
-      var boundaryFilter = ['all'];
-      if (stateAbbr) boundaryFilter.push(['==', 'state', stateAbbr]);
-      if (districtCode) boundaryFilter.push(['==', 'number', districtCode]);
-
-      // Apply the generic filter to the boundary lines
-      map.setFilter('districts_boundary_line', boundaryFilter);
 
       // Determine current window height and width and whether the bbox should focus on a single district
       var height = window.innerHeight,
@@ -215,7 +202,7 @@ if (mapboxgl.supported({ failIfMajorPerformanceCaveat: true })) {
 
       // Determine the best center and zoom level for the new map focus and then go there
       var view = geoViewport.viewport(bboxes[stateAbbr + districtAbbr], [width/2, height/2]);
-      map.jumpTo(view);
+      map.easeTo(view);
 
     }
 
@@ -246,7 +233,6 @@ if (mapboxgl.supported({ failIfMajorPerformanceCaveat: true })) {
         if (!initial) {
 
           // Reset the map style to its original style object and jump back to the continental view
-          map.setStyle(baseStyle);
           map.jumpTo(continentalView(window.innerWidth/2, window.innerHeight/2));
 
           //** INTERACTIVE MENU
@@ -269,9 +255,7 @@ if (mapboxgl.supported({ failIfMajorPerformanceCaveat: true })) {
     // A click handler that shows what was under the cursor where
     // the user clicked.
     map.on("click", function(e) {
-      var district = null;
-
-      if (1) {
+      if (0) {
         // The map control provides a client-side-only way to determine what
         // is under the cursor. We restrict the query to only the layers that
         // provide congressional district polygons. Note that this only scans
@@ -281,11 +265,13 @@ if (mapboxgl.supported({ failIfMajorPerformanceCaveat: true })) {
         var features = map.queryRenderedFeatures(
           e.point,
           {
-            layers: ["districts_1", "districts_2", "districts_3", "districts_4", "districts_5"]
+            layers: ["districts-fill-1", "districts-fill-2", "districts-fill-3", "districts-fill-4", "districts-fill-5"]
           });
         if (features.length > 0)
           // The feature properties come from the original GeoJSON uploaded to Mapbox.
-          district = features[0].properties;
+          show_district(features[0].properties);
+        else
+          show_district(null);
 
       } else {
         // Use the Mapbox tilequery API instead.
@@ -306,23 +292,27 @@ if (mapboxgl.supported({ failIfMajorPerformanceCaveat: true })) {
               // (whose geometry is a Polygon) represending the boundaries of a
               // congressional district. Its properties come from the original
               // GeoJSON uploaded to Mapbox.
-              district = resp.features[0].properties;
+              show_district(resp.features[0].properties);
+            else
+              show_district(null);
           }
         });
       }
 
-      // Ok now we have the district either from the client-side query or the
-      // API.
-      if (district) {
-        // district.state now holds the two-letter USPS state abbreviation,
-        // and district.number now holds a zero-padded two-digit district
-        // number (00 for at-large districts). title_long and title_short
-        // have strings useful for display (e.g. "VA 8" and "Virginia’s 8th
-        // Congressional District", respectively).
-        alert("That's " + district.state + "-" + district.number + ", i.e." + district.title_long + ".");
+      function show_district(district) {
+        // Ok now we have the district either from the client-side query or the
+        // API.
+        if (district) {
+          // district.state now holds the two-letter USPS state abbreviation,
+          // and district.number now holds a zero-padded two-digit district
+          // number (00 for at-large districts). title_long and title_short
+          // have strings useful for display (e.g. "VA 8" and "Virginia’s 8th
+          // Congressional District", respectively).
+          alert("That's " + district.state + "-" + district.number + ".");
 
-      } else {
-        alert("You clicked on a location that is not within a U.S. congressional district.")
+        } else {
+          alert("You clicked on a location that is not within a U.S. congressional district.")
+        }
       }
     })
 
