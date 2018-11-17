@@ -1,6 +1,6 @@
 var fs = require('fs'),
     fiveColorMap = require('five-color-map'),
-    turf = require('turf');
+    turf = require('@turf/turf');
 
 // Load the state names, FIPS codes, and USPS abbreviations and make a mapping
 // from FIPS codes (found in Census data) to USPS abbreviations (used in our output).
@@ -16,7 +16,7 @@ census_boundaries = census_boundaries.features
     // Some states have district 'ZZ' which represents the area of
     // a state, usually over water, that is not included in any
     // congressional district --- filter these out
-    if (d.properties['CD115FP'] == 'ZZ')
+    if (d.properties['CD116FP'] == 'ZZ')
       return false;
     return true;
   })
@@ -30,10 +30,10 @@ census_boundaries = census_boundaries.features
         state_name: stateFipsCodesMap[parseInt(item.properties.STATEFP)].Name,
 
         // Get the district number in two-digit form ("00" (for at-large
-        // districts), "01", "02", ...). The Census data's CD114FP field
+        // districts), "01", "02", ...). The Census data's CD116FP field
         // holds it in this format. Except for the island territories
         // which have "98", but are just at-large and should be "00".
-        number: item.properties.CD115FP == "98" ? "00" : item.properties.CD115FP,
+        number: item.properties.CD116FP == "98" ? "00" : item.properties.CD116FP,
 
         // Census TIGER files have INTPTLON/INTPTLAT which conveniently
         // provides a point where a label for the polygon can be placed.
@@ -84,7 +84,6 @@ districts.features.forEach(function(d) {
   // add both the label point and congressional district to the mapData feature collection
   mapData.features.push(pt);
   mapData.features.push(d);
-
 });
 
 // Write out the mapData. It's too large to use JSON.stringify with indentation,
@@ -106,7 +105,7 @@ var districtBboxes = {},
     stateBboxes = {};
 
 districts.features.forEach(function(d) {
-  var bounds = turf.extent(d);
+  var bounds = turf.bbox(d);
 
   // for the district
   districtBboxes[d.properties.state + d.properties.number] = bounds;
@@ -121,11 +120,11 @@ districts.features.forEach(function(d) {
 })
 
 for (var s in stateBboxes) {
-  stateBboxes[s] = turf.extent(stateBboxes[s]);
+  stateBboxes[s] = turf.bbox(stateBboxes[s]);
 }
 
 var bboxes = {};
 for (var b in districtBboxes) { bboxes[b] = districtBboxes[b] };
 for (var b in stateBboxes) { bboxes[b] = stateBboxes[b] };
-fs.writeFileSync('./example/bboxes.js', 'var bboxes = ' + JSON.stringify(bboxes, null, 2));
+fs.writeFileSync('./data/bboxes.js', 'var bboxes = ' + JSON.stringify(bboxes, null, 2));
 

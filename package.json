@@ -9,9 +9,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@turf/turf": "^5.1.6",
     "aws-sdk": "^2.2.45",
     "five-color-map": "^1.0.3",
-    "mapbox": "^1.0.0-beta",
-    "turf": "^2.0.2"
+    "mapbox": "^1.0.0-beta"
   }
 }

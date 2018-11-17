@@ -2,7 +2,7 @@
 
 Follow the steps below to create a web map of United States congressional districts from Census Bureau data using Mapbox. You can also use this to create a lat/lng-to-congressional district API.
 
-These instructions create maps for the 115th Congress using district boundaries as of the 2016 election. (These differed from the 2010 Census boundaries because of court-ordered redistricting in three states in early 2016.)
+These instructions create maps for the 116th Congress using district boundaries as of the 2018 elections. (These differed from the 115th Congress boundaries because of court-ordered redistricting in Pennsylvania in 2018.)
 
 You will need an account on Mapbox.com. Then follow the commands below from the Mac OS X or Ubuntu terminal.
 
@@ -52,15 +52,15 @@ To complete these steps, run the commands below. Set `MAPBOX_USERNAME` to your M
 mkdir data
 
 # dowload Census boundaries data, unzip the data, and convert it to GeoJSON
-wget -P data ftp://ftp2.census.gov/geo/tiger/TIGER2016/CD/tl_2016_us_cd115.zip
-unzip data/tl_2016_us_cd115.zip -d ./data/
-ogr2ogr -f GeoJSON -t_srs crs:84 data/congressional_districts.geojson data/tl_2016_us_cd115.shp
+wget -P data ftp://ftp2.census.gov/geo/tiger/TIGER2018/CD/tl_2018_us_cd116.zip
+unzip data/tl_2018_us_cd116.zip -d ./data/
+ogr2ogr -f GeoJSON -t_srs crs:84 data/congressional_districts.geojson data/tl_2018_us_cd116.shp
 
 # run processing on data
 node process.js data/congressional_districts.geojson
 
 # create Mapbox vector tiles from data
-tippecanoe -o data/cd-115-2016.mbtiles -f -z 12 -Z 0 -B 0 -pS -pp -l districts -n "US Congressional Districts" data/map.geojson
+tippecanoe -o data/cd-116-2018.mbtiles -f -Z 0 -z 12 -B0 -pS -n "116th Congress (2018) Congressional Districts" data/map.geojson
 
 # setup Mapbox account name and access tokens
 export MAPBOX_USERNAME=<your mapbox username>
@@ -68,7 +68,7 @@ export MAPBOX_DEFAULT_ACCESS_TOKEN=<your mapbox default access token>
 export MAPBOX_WRITE_SCOPE_ACCESS_TOKEN=<your mapbox write scope access token>
 
 # upload map data to Mapbox.com
-node upload.js data/cd-115-2016.mbtiles "cd-115-2016" "US_Congressional_Districts_115th_2016"
+node upload.js data/cd-116-2018.mbtiles "cd-116-2018" "US_Congressional_Districts_116th_2018"
 
 # modify mapbox-style-template.json to use your Mapbox account and save as data/mapbox-style.json
 sed s/'USER'/"$MAPBOX_USERNAME"/g mapbox-style-template.json > data/mapbox-style.json
