@@ -52,8 +52,17 @@ var districts = {
 
 // Use the five-color-map package to assign color numbers to each
 // congressional district so that no two touching districts are
-// assigned the same color number.
+// assigned the same color number. fiveColorMap assigns a 'fill'
+// property to each feature with a differnet color, but the colors
+// aren't what we want. Change these back to indexes.
 districts = fiveColorMap(districts);
+var fiveColorMapMap = { };
+districts.features.forEach(function(feature) {
+  if (typeof fiveColorMapMap[feature.properties.fill] == "undefined")
+    fiveColorMapMap[feature.properties.fill] = Object.keys(fiveColorMapMap).length;
+  feature.properties.color_index = fiveColorMapMap[feature.properties.fill];
+  delete feature.properties.fill;
+});
 
 // turns 1 into '1st', etc.
 function ordinal(number) {
