@@ -1,6 +1,7 @@
 var fs = require('fs'),
     fiveColorMap = require('five-color-map'),
-    turf = require('@turf/turf');
+    turf = require('@turf/turf'),
+    polylabel = require('@mapbox/polylabel');
 
 // Load the state names, FIPS codes, and USPS abbreviations and make a mapping
 // from FIPS codes (found in Census data) to USPS abbreviations (used in our output).
@@ -37,6 +38,9 @@ census_boundaries = census_boundaries.features
 
         // Census TIGER files have INTPTLON/INTPTLAT which conveniently
         // provides a point where a label for the polygon can be placed.
+        // But these points have inconsistent quality in terms of usage
+        // for labels, and some are very poorly located, so we don't use them
+        // unless the alternate method of locating a label point fails.
         label_pt_lon: parseFloat(item.properties.INTPTLON),
         label_pt_lat: parseFloat(item.properties.INTPTLAT),
       },
@@ -76,8 +80,18 @@ function ordinal(number) {
 // contains both district boundaries and label points.
 var mapData = { 'type': 'FeatureCollection', 'features': [] }
 districts.features.forEach(function(d) {
+  // Compute a good location to place a label for this district. Use the
+  // polygon with the largest area.
+  var label_coord = polylabel(d.geometry.coordinates, .01);
+  if (Number.isNaN(label_coord[0])) {
+    // polylabel fails for a variety of districts for unknown reasons.
+    // Fall back to the Census interior points.
+    label_coord = [d.properties.label_pt_lon, d.properties.label_pt_lat];
+    //console.log(d.properties.state, d.properties.number, label_coord);
+  }
+
   // Create a turf.point to hold information for rending labels.
-  var pt = turf.point([d.properties.label_pt_lon, d.properties.label_pt_lat]);
+  var pt = turf.point(label_coord);
 
   // add metadata to the label
   pt.properties = JSON.parse(JSON.stringify(d.properties)); // copy hack to avoid mutability issues
