@@ -11,14 +11,21 @@ stateCodes.forEach(function(item) { stateFipsCodesMap[item.FIPS] = item; })
 fs.writeFileSync('./example/states.js', 'var states = ' + JSON.stringify(stateCodes, null, 2));
 
 // Load and re-format the congressional district data.
-var census_boundaries = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-census_boundaries = census_boundaries.features
+var census_boundaries = 
+  JSON.parse(fs.readFileSync("data/congressional_districts.geojson", 'utf8'))
+  .features
   .filter(function(d) {
     // Some states have district 'ZZ' which represents the area of
     // a state, usually over water, that is not included in any
     // congressional district --- filter these out
     if (d.properties['CD116FP'] == 'ZZ')
       return false;
+
+    // Remove NC's districts which were revised and are loaded
+    // from a separate file.
+    if (d.properties['STATEFP'] == 37)
+      return false;
+
     return true;
   })
   // re-do the Feature's properties to our own format
@@ -47,6 +54,27 @@ census_boundaries = census_boundaries.features
       "geometry": item.geometry
     };
   });
+
+// Add NC's districts.
+census_boundaries = 
+  census_boundaries.concat(
+  JSON.parse(fs.readFileSync("data/congressional_districts_nc.geojson", 'utf8'))
+  .features
+  .map(function(item) {
+    return {
+      "type": "Feature",
+      "properties": {
+        state: "NC",
+        state_name: stateFipsCodesMap[37].Name,
+
+        // Get the district number in two-digit form ("00" (for at-large
+        // districts), "01", "02", ...).
+        number: (item.properties.DISTRICT.length == 1 ? '0' : '')
+          + item.properties.DISTRICT,
+      },
+      "geometry": item.geometry
+    };
+  }));
 
 // Build a new FeatureCollection that we can pass into fiveColorMap.
 var districts = {

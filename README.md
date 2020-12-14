@@ -30,7 +30,7 @@ sudo apt-get install gdal-bin libprotobuf-dev protobuf-compiler libsqlite3-dev
 git clone https://github.com/mapbox/tippecanoe
 cd tippecanoe
 make
-make install
+cd ..
 ```
 
 #### Setup:
@@ -38,14 +38,14 @@ make install
 Download this repository and then use `npm` to install a few more dependencies:
 
 ```
-git clone https://github.com/aaronpdennis/congress-maps.git
+git clone https://github.com/govtrack/congress-maps.git
 cd congress-maps
 npm install
 ```
 
 #### Creating the map:
 
-To complete these steps, run the commands below. Set `MAPBOX_USERNAME` to your Mapbox username, `MAPBOX_DEFAULT_ACCESS_TOKEN` to your Mapbox default access token, and `MAPBOX_ACESS_TOKEN` to a `uploads:write` scope access token from your [Mapbox account](https://www.mapbox.com/studio/account/tokens).
+To complete these steps, run the commands below. Set `MAPBOX_USERNAME` to your Mapbox username, `MAPBOX_DEFAULT_ACCESS_TOKEN` to your Mapbox default public token, and `MAPBOX_ACESS_TOKEN` to a `uploads:write` scope access token from your [Mapbox account](https://www.mapbox.com/studio/account/tokens).
 
 ```
 # create directory to store data
@@ -56,27 +56,34 @@ wget -P data ftp://ftp2.census.gov/geo/tiger/TIGER2018/CD/tl_2018_us_cd116.zip
 unzip data/tl_2018_us_cd116.zip -d ./data/
 ogr2ogr -f GeoJSON -t_srs crs:84 data/congressional_districts.geojson data/tl_2018_us_cd116.shp
 
+# download new 2020 North Carolina CDs
+# (h/t https://blogs.sas.com/content/graphicallyspeaking/2019/11/25/plotting-ncs-new-congressional-districts-maps-for-2020/)
+wget -O data/NC_HB1029_3.zip https://webservices.ncleg.gov/ViewBillDocument/2019/6953/0/HB%201029,%203rd%20Edition%20-%20Shapefile
+unzip data/NC_HB1029_3.zip -d ./data/
+ogr2ogr -f GeoJSON -t_srs crs:84 data/congressional_districts_nc.geojson data/C-Goodwin-A-1-TC.shp
+
 # run processing on data
-node process.js data/congressional_districts.geojson
+node process.js
 
 # create Mapbox vector tiles from data
-tippecanoe -o data/cd-116-2018.mbtiles -f -Z 0 -z 12 -B0 -pS -n "116th Congress (2018) Congressional Districts" data/map.geojson
+tippecanoe/tippecanoe -o data/cd-117-2020.mbtiles -f -Z 0 -z 12 -B0 -pS -n "117th Congress (2020 Election) Congressional Districts" data/map.geojson
 
-# setup Mapbox account name and access tokens
+# setup Mapbox account name, default public token, and write-scoped token
 export MAPBOX_USERNAME=<your mapbox username>
 export MAPBOX_DEFAULT_ACCESS_TOKEN=<your mapbox default access token>
 export MAPBOX_WRITE_SCOPE_ACCESS_TOKEN=<your mapbox write scope access token>
 
 # upload map data to Mapbox.com
-node upload.js data/cd-116-2018.mbtiles "cd-116-2018" "US_Congressional_Districts_116th_2018"
-
-# modify mapbox-style-template.json to use your Mapbox account and save as data/mapbox-style.json
-sed s/'USER'/"$MAPBOX_USERNAME"/g mapbox-style-template.json > data/mapbox-style.json
+node upload.js data/cd-117-2020.mbtiles "cd-117-2020" "US_Congressional_Districts_117th_Congress_2020_Elections"
 ```
 
-Next, go to [mapbox.com/studio/styles](https://www.mapbox.com/styles), then drag-and-drop the `data/mapbox-style.json` file onto the screen. This should upload the map style to Mapbox.
+Check out [mapbox.com/studio](https://www.mapbox.com/studio) to see updates on data processing. Once Mapbox is finished processing your upload, you can make a map style. Click New Style. Choose a template --- I last tried Navigation - Day, which seemed nice. Then create layers:
 
-Check out [mapbox.com/studio](https://www.mapbox.com/studio) to see updates on data processing. Once Mapbox is finished processing your upload, you can try it out.
+* Create a new layer. In Select Data, Select the uploaded tileset as the source. Change the type to fill. In Style, click Style With Data Conditions. Select color_index as the data value. Select 0, choose a color, click Done. Then click Add Another Condition and repeat for 1 through 4. Name the layer CD-Fills. Drag the layer all the way to the bottom of the layers but above "Land & water, land" so that it covers the base color for land but is behind all of the other map features. Click Style Across Zoom Range. Click the stop point for zoom 22 and set the opacity for each color to 0 and the zoom level to 15, so that the fills fade out when zoomed into street level.
+* Create another layer with the same data named CD-Outlines. Set its type to Line. Click Width, then Style Across Zoom Range. Set the first zoom stop to zoom level 3 and line width 1px. Set the second zoom stop to zoom level 15 and the line width to 4px. Keep this layer at the top.
+* Create another layer named CD-Labels. Set its type to Symbol. Click Text Field, style across zoom range. At zoom stop 0, set the text field to the data field title_short. Set the second stop to zoom level 7 and the text field to the data field title_long. I set the font to Montserrat Bold 17px.
+
+I turned off country-label and state-label visibility.
 
 #### Usage:
 
