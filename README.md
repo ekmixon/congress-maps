@@ -87,7 +87,7 @@ I turned off country-label and state-label visibility.
 
 #### Usage:
 
-Use the files in the `example` directory as the basis for making a web map with functionality to focus on specific states or districts. To use this example web map, you'll need to change out my map style and default access token for your own. In the `index.html` file, replace my Mapbox default access token on line 75 and my map style URL on line 79 with your own.
+Use the files in the `example` directory as the basis for making a web map with functionality to focus on specific states or districts. To use this example web map, you'll need to edit `index.html` and insert your default public access token and the style URL and tileset ID from Mapbox.
 
 After following the steps above, `index.html` will be a full page web map of U.S. Congressional districts. Host this file and the two supporting scripts (`states.js`, `bboxes.js`) on your website. If you don't want the interactive menu on your map, search through `index.html` and remove all sections of code that immediately follow the `INTERACTIVE MENU` line comment labels.
 
