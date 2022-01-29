@@ -10,7 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "@mapbox/polylabel": "^1.0.2",
-    "@turf/turf": "^5.1.6",
+    "@turf/turf": "^6.5.0",
     "aws-sdk": "^2.2.45",
     "five-color-map": "^1.0.3",
     "mapbox": "^1.0.0-beta"
